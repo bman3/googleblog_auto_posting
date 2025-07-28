@@ -1,0 +1,36 @@
+# 민감한 인증 파일들
+service-account-key.json
+autoblog-464801-b118736b5de7.json
+token.json
+token_backup_*.json
+*.json.bak
+
+# 환경 변수 파일들
+.env
+env_example.txt
+
+# 배포 스크립트 (API 키 포함)
+deploy.bat
+deploy_auto.bat
+scheduled_token_refresh.py
+setup_service_account.py
+manual_token_generator.py
+generate_token.py
+
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# 로그 파일
+*.log
+auto_posting_log.json 
