@@ -24,7 +24,7 @@ jobs:
         
     - name: Authenticate to Google Cloud
       run: |
-        echo ${{ secrets.GCP_SA_KEY }} | base64 -d > service-account-key.json
+        echo '${{ secrets.GCP_SA_KEY }}' | base64 -d > service-account-key.json
         gcloud auth activate-service-account --key-file=service-account-key.json
         gcloud config set project autoblog-464801
         
