@@ -14,6 +14,13 @@
 
 이 파일이 수정되면 GitHub Actions가 자동으로 배포를 시작합니다!
 
+## 권한 설정 완료 ✅
+
+Google Cloud Service Account 권한이 설정되었습니다:
+- Cloud Functions 개발자
+- 서비스 계정 사용자
+- Cloud Build 서비스 에이전트
+
 ## 배포 URL
 
 https://asia-northeast3-autoblog-464801.cloudfunctions.net/blog-post-func 
