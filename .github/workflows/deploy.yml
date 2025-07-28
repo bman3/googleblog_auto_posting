@@ -1,0 +1,39 @@
+name: Deploy to Google Cloud Functions
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: autoblog-464801
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Deploy to Cloud Functions
+      run: |
+        gcloud functions deploy blog-post-func \
+          --gen2 \
+          --runtime=python311 \
+          --region=asia-northeast3 \
+          --source=. \
+          --entry-point=handler \
+          --trigger-http \
+          --allow-unauthenticated \
+          --set-env-vars BLOG_ID=${{ secrets.BLOG_ID }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},HUGGINGFACE_API_KEY=${{ secrets.HUGGINGFACE_API_KEY }}
+          
+    - name: Test deployment
+      run: |
+        echo "배포 완료! Cloud Function URL:"
+        echo "https://asia-northeast3-autoblog-464801.cloudfunctions.net/blog-post-func" 
