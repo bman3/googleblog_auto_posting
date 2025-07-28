@@ -22,6 +22,7 @@ Google Cloud Service Account 권한이 설정되었습니다:
 - Cloud Build 서비스 에이전트
 - Cloud Build 서비스 계정
 - Cloud Run 관리자
+- 소유자 (추가 필요)
 
 ## 배포 URL
 
