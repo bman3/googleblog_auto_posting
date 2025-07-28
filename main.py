@@ -15,10 +15,23 @@ from googleapiclient.discovery import build
 def get_keyword():
     """트렌드 키워드 자동 생성"""
     print('[LOG] Google Trends 키워드 자동 생성 시작')
-    from pytrends.request import TrendReq
     import random
+    
+    # 예비 키워드 (Google Trends API 문제로 인해 기본값 사용)
+    fallback_keywords = [
+        'AI', '인공지능', '클라우드', '빅데이터', '프로그래밍', '코딩',
+        '증시', '주식', 'ETF', '투자', '재테크', '금융',
+        '다이어트', '건강', '운동', '헬스', '영양', '생활',
+        '여행', '골프', '등산', '취미', '문화', '라이프스타일',
+        '기술', '소프트웨어', '개발', '웹', '모바일', '앱',
+        '교육', '학습', '온라인', '디지털', '미래', '혁신'
+    ]
+    
     try:
-        pytrends = TrendReq(hl='ko', tz=540, requests_args={'headers': {'User-Agent': 'Mozilla/5.0'}})
+        from pytrends.request import TrendReq
+        pytrends = TrendReq(hl='ko', tz=540, timeout=(10,25), requests_args={'headers': {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}})
+        
+        # 한국 트렌딩 검색어 가져오기
         trending = pytrends.trending_searches(pn='south_korea')
         print(f'[DEBUG] pytrends 결과: {trending}')
         
@@ -30,21 +43,15 @@ def get_keyword():
         ]
         
         keywords = [str(k) for k in trending[0] if isinstance(k, str) and len(k) > 1 and not any(ex in str(k) for ex in exclude_keywords)]
-        if not keywords:
+        if keywords:
+            selected_keyword = random.choice(keywords)
+            print(f'[LOG] 선택된 키워드: {selected_keyword}')
+            return selected_keyword
+        else:
             raise Exception('pytrends에서 필터링 후 키워드를 찾을 수 없습니다.')
-        
-        selected_keyword = random.choice(keywords)
-        print(f'[LOG] 선택된 키워드: {selected_keyword}')
-        return selected_keyword
+            
     except Exception as e:
         print(f'[ERROR] 키워드 생성 실패: {e}')
-        # 예비 키워드
-        fallback_keywords = [
-            'AI', '인공지능', '클라우드', '빅데이터', '프로그래밍', '코딩',
-            '증시', '주식', 'ETF', '투자', '재테크', '금융',
-            '다이어트', '건강', '운동', '헬스', '영양', '생활',
-            '여행', '골프', '등산', '취미', '문화', '라이프스타일'
-        ]
         selected_keyword = random.choice(fallback_keywords)
         print(f'[LOG] 예비 키워드 사용: {selected_keyword}')
         return selected_keyword
@@ -52,6 +59,13 @@ def get_keyword():
 def generate_ai_content(topic):
     """AI로 블로그 포스트 생성"""
     print(f'[LOG] AI 글 생성 시작: {topic}')
+    
+    # API 키 검증
+    gemini_api_key = os.environ.get('GEMINI_API_KEY')
+    if not gemini_api_key:
+        print('[ERROR] GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.')
+        return None, None, None, None, None, None, "GEMINI_API_KEY 없음"
+    
     prompt = f"""
 다음 키워드에 대해 한글과 영어로 블로그 포스트를 작성해 주세요.
 아래와 같이 반드시 JSON만 반환해 주세요. (body는 반드시 HTML로 작성)
@@ -82,12 +96,17 @@ def generate_ai_content(topic):
     
     try:
         print('[DEBUG] Gemini API 요청 시작')
+        print(f'[DEBUG] API 키 확인: {gemini_api_key[:10]}...')
+        
         response = requests.post(
             'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
             headers={'Content-Type': 'application/json'},
-            params={'key': os.environ.get('GEMINI_API_KEY')},
-            json={'contents': [{'parts': [{'text': prompt}]}]}
+            params={'key': gemini_api_key},
+            json={'contents': [{'parts': [{'text': prompt}]}]},
+            timeout=30
         )
+        
+        print(f'[DEBUG] Gemini API 응답 상태: {response.status_code}')
         
         if response.status_code == 200:
             result = response.json()
@@ -115,8 +134,9 @@ def generate_ai_content(topic):
                 print(f'[ERROR] JSON 파싱 실패: {e}')
                 return None, None, None, None, None, None, f"JSON 파싱 실패: {e}"
         else:
-            print(f'[ERROR] Gemini API 호출 실패: {response.status_code}')
-            return None, None, None, None, None, None, f"API 호출 실패: {response.status_code}"
+            error_detail = response.text if response.text else "응답 내용 없음"
+            print(f'[ERROR] Gemini API 호출 실패: {response.status_code} - {error_detail}')
+            return None, None, None, None, None, None, f"API 호출 실패: {response.status_code} - {error_detail}"
     except Exception as e:
         print(f'[ERROR] AI 글 생성 예외: {str(e)}')
         return None, None, None, None, None, None, f"예외 발생: {str(e)}"
