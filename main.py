@@ -94,52 +94,71 @@ def generate_ai_content(topic):
 키워드: {topic}
 """
     
-    try:
-        print('[DEBUG] Gemini API 요청 시작')
-        print(f'[DEBUG] API 키 확인: {gemini_api_key[:10]}...')
-        
-        response = requests.post(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-            headers={'Content-Type': 'application/json'},
-            params={'key': gemini_api_key},
-            json={'contents': [{'parts': [{'text': prompt}]}]},
-            timeout=30
-        )
-        
-        print(f'[DEBUG] Gemini API 응답 상태: {response.status_code}')
-        
-        if response.status_code == 200:
-            result = response.json()
-            content = result['candidates'][0]['content']['parts'][0]['text']
+    # 재시도 로직
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f'[DEBUG] Gemini API 요청 시작 (시도 {attempt + 1}/{max_retries})')
+            print(f'[DEBUG] API 키 확인: {gemini_api_key[:10]}...')
             
-            # 마크다운 제거
-            content = re.sub(r'^[`\*\s]*json[\s`\*]*\n', '', content)
-            content = re.sub(r'^```json\s*\n', '', content)
-            content = re.sub(r'^```\s*\n', '', content)
-            content = re.sub(r'\n```$', '', content)
-            content = content.strip()
+            response = requests.post(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+                headers={'Content-Type': 'application/json'},
+                params={'key': gemini_api_key},
+                json={'contents': [{'parts': [{'text': prompt}]}]},
+                timeout=60  # 타임아웃을 60초로 증가
+            )
             
-            try:
-                data = json.loads(content)
-                ko_title = data['ko']['title'].strip()
-                ko_body = data['ko']['body'].strip()
-                ko_tags = data['ko'].get('tags', [])
-                en_title = data['en']['title'].strip()
-                en_body = data['en']['body'].strip()
-                en_tags = data['en'].get('tags', [])
+            print(f'[DEBUG] Gemini API 응답 상태: {response.status_code}')
+            
+            if response.status_code == 200:
+                result = response.json()
+                content = result['candidates'][0]['content']['parts'][0]['text']
                 
-                print(f'[DEBUG] AI 글 생성 성공')
-                return ko_title, ko_body, en_title, en_body, ko_tags, en_tags, None
-            except Exception as e:
-                print(f'[ERROR] JSON 파싱 실패: {e}')
-                return None, None, None, None, None, None, f"JSON 파싱 실패: {e}"
-        else:
-            error_detail = response.text if response.text else "응답 내용 없음"
-            print(f'[ERROR] Gemini API 호출 실패: {response.status_code} - {error_detail}')
-            return None, None, None, None, None, None, f"API 호출 실패: {response.status_code} - {error_detail}"
-    except Exception as e:
-        print(f'[ERROR] AI 글 생성 예외: {str(e)}')
-        return None, None, None, None, None, None, f"예외 발생: {str(e)}"
+                # 마크다운 제거
+                content = re.sub(r'^[`\*\s]*json[\s`\*]*\n', '', content)
+                content = re.sub(r'^```json\s*\n', '', content)
+                content = re.sub(r'^```\s*\n', '', content)
+                content = re.sub(r'\n```$', '', content)
+                content = content.strip()
+                
+                try:
+                    data = json.loads(content)
+                    ko_title = data['ko']['title'].strip()
+                    ko_body = data['ko']['body'].strip()
+                    ko_tags = data['ko'].get('tags', [])
+                    en_title = data['en']['title'].strip()
+                    en_body = data['en']['body'].strip()
+                    en_tags = data['en'].get('tags', [])
+                    
+                    print(f'[DEBUG] AI 글 생성 성공')
+                    return ko_title, ko_body, en_title, en_body, ko_tags, en_tags, None
+                except Exception as e:
+                    print(f'[ERROR] JSON 파싱 실패: {e}')
+                    if attempt == max_retries - 1:
+                        return None, None, None, None, None, None, f"JSON 파싱 실패: {e}"
+                    continue
+            else:
+                error_detail = response.text if response.text else "응답 내용 없음"
+                print(f'[ERROR] Gemini API 호출 실패: {response.status_code} - {error_detail}')
+                if attempt == max_retries - 1:
+                    return None, None, None, None, None, None, f"API 호출 실패: {response.status_code} - {error_detail}"
+                continue
+                
+        except requests.exceptions.Timeout as e:
+            print(f'[ERROR] Gemini API 타임아웃 (시도 {attempt + 1}/{max_retries}): {e}')
+            if attempt == max_retries - 1:
+                return None, None, None, None, None, None, f"타임아웃 오류: {e}"
+            time.sleep(5)  # 5초 대기 후 재시도
+            continue
+        except Exception as e:
+            print(f'[ERROR] AI 글 생성 예외 (시도 {attempt + 1}/{max_retries}): {str(e)}')
+            if attempt == max_retries - 1:
+                return None, None, None, None, None, None, f"예외 발생: {str(e)}"
+            time.sleep(5)  # 5초 대기 후 재시도
+            continue
+    
+    return None, None, None, None, None, None, "최대 재시도 횟수 초과"
 
 def get_service_account_service():
     """Service Account로 Blogger API 서비스 생성"""
