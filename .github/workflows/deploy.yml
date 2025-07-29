@@ -35,7 +35,7 @@ jobs:
           --source=. \
           --entry-point=handler \
           --trigger-http \
-          --update-env-vars BLOG_ID=${{ secrets.BLOG_ID }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},HUGGINGFACE_API_KEY=${{ secrets.HUGGINGFACE_API_KEY }},GOOGLE_APPLICATION_CREDENTIALS_JSON=${{ secrets.GCP_SA_KEY }}
+          --set-env-vars BLOG_ID="${{ secrets.BLOG_ID }}",GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}",HUGGINGFACE_API_KEY="${{ secrets.HUGGINGFACE_API_KEY }}",GOOGLE_APPLICATION_CREDENTIALS_JSON="${{ secrets.GCP_SA_KEY }}"
           
     - name: Test deployment
       run: |
