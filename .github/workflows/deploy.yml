@@ -26,6 +26,15 @@ jobs:
       with:
         project_id: autoblog-464801
         
+    - name: Create environment variables file
+      run: |
+        cat > env.yaml << EOF
+        BLOG_ID: "${{ secrets.BLOG_ID }}"
+        GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
+        HUGGINGFACE_API_KEY: "${{ secrets.HUGGINGFACE_API_KEY }}"
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: "${{ secrets.GCP_SA_KEY }}"
+        EOF
+        
     - name: Deploy to Cloud Functions
       run: |
         gcloud functions deploy blog-post-func \
@@ -35,7 +44,7 @@ jobs:
           --source=. \
           --entry-point=handler \
           --trigger-http \
-          --set-env-vars BLOG_ID="${{ secrets.BLOG_ID }}",GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}",HUGGINGFACE_API_KEY="${{ secrets.HUGGINGFACE_API_KEY }}",GOOGLE_APPLICATION_CREDENTIALS_JSON="${{ secrets.GCP_SA_KEY }}"
+          --env-vars-file=env.yaml
           
     - name: Test deployment
       run: |
