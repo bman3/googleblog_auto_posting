@@ -144,18 +144,38 @@ def generate_ai_content(topic):
 def get_service_account_service():
     """Service Account로 Blogger API 서비스 생성"""
     try:
-        # Service Account 키 파일 경로
-        key_file = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', 'service-account-key.json')
-        
-        if not os.path.exists(key_file):
-            print(f'[ERROR] Service Account 키 파일이 없습니다: {key_file}')
+        # 환경 변수에서 Service Account 키 가져오기
+        sa_key_json = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+        if not sa_key_json:
+            print('[ERROR] GOOGLE_APPLICATION_CREDENTIALS_JSON 환경 변수가 설정되지 않았습니다.')
             return None
+        
+        # 임시 파일로 Service Account 키 저장
+        import tempfile
+        import json
+        
+        # JSON 파싱하여 유효성 검사
+        try:
+            sa_key_data = json.loads(sa_key_json)
+        except json.JSONDecodeError as e:
+            print(f'[ERROR] Service Account 키 JSON 파싱 실패: {e}')
+            return None
+        
+        # 임시 파일 생성
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_file:
+            json.dump(sa_key_data, tmp_file)
+            key_file = tmp_file.name
+        
+        print(f'[DEBUG] Service Account 키 파일 생성: {key_file}')
         
         # Service Account 인증 정보 생성
         credentials = service_account.Credentials.from_service_account_file(
             key_file,
             scopes=['https://www.googleapis.com/auth/blogger']
         )
+        
+        # 임시 파일 삭제
+        os.unlink(key_file)
         
         # Blogger API 서비스 생성
         service = build('blogger', 'v3', credentials=credentials)
